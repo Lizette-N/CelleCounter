@@ -9,33 +9,6 @@
 #include "cbmp.h"
 #include <unistd.h>
 
-// Function to invert pixels of an image (negative)
-void invert(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS], unsigned char output_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
-{
-  for (int x = 0; x < BMP_WIDTH; x++)
-  {
-    for (int y = 0; y < BMP_HEIGHT; y++)
-    {
-      for (int c = 0; c < BMP_CHANNELS; c++)
-      {
-        output_image[x][y][c] = 255 - input_image[x][y][c];
-      }
-    }
-  }
-}
-/*void printarray(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
-{
-  for (int x = 0; x < 10; x++)
-  {
-    for (int y = 0; y < 10; y++)
-    {
-      printf("R: %i ", input_image[x][y][0]);
-      printf("G: %i ", input_image[x][y][1]);
-      printf("B: %i :", input_image[x][y][2]);
-    }
-  }
-}
-*/
 unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT];
 unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT];
 unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT];
@@ -44,6 +17,8 @@ unsigned char array2D[BMP_WIDTH][BMP_HEIGHT];
 unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 int wasEroded=0;
 int *ptr=&wasEroded;
+int cells=0;
+
 void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -54,6 +29,7 @@ void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS
     }
   }
 }
+
 void upscale2DTo3D(unsigned char array2D[BMP_WIDTH][BMP_HEIGHT], unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -91,26 +67,72 @@ void binaryThreshold(unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT])
 }
 
 void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT]){
-  //*ptr=0;
+  *ptr=0;
   for (int x = 1; x< BMP_WIDTH-1; x++){
       for (int y = 1; y< BMP_HEIGHT-1; y++){
           if (arrayA[x-1][y]== 0||arrayA[x][y-1]==0||arrayA[x][y+1]==0||arrayA[x+1][y]==0){
             arrayB[x][y]=0;
-            // was eroded kommer her ind
-            //*ptr=1;
+            // was eroded kommer her ind 
           }
           else{
             arrayB[x][y]=255;
+            *ptr=1;
           }
       }
     
     }
+    printf("%i\n",*ptr);
     for (int x = 0; x < BMP_WIDTH; x++){
       arrayB[x][0]=0;
       arrayB[x][BMP_WIDTH-1]=0;
       arrayB[0][x]=0;
       arrayB[BMP_HEIGHT-1][x]=0;
-  }
+  
+    }
+}
+void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT]){
+  for (int x = 0; x < BMP_WIDTH-15; x++){
+      for (int y = 0; y < BMP_HEIGHT-15; y++){
+        int blackBorder = 1;
+        int containsWhite = 0;
+
+        for (int i = x; i < x + 14 ; i++ ){
+          if (arrayA[i][y] == 255||arrayA[i][y+13]==255){
+            blackBorder = 0;
+            break;
+          }
+        }
+        for ( int i = y+1; i < y + 14 ; i++ ){
+          if (arrayA[x][i] == 255||arrayA[x+13][i]==255){ 
+            blackBorder = 0;
+            break;
+          }
+        }
+        if(blackBorder == 1){
+          for (int i = x + 1; i < x + 13; i++){
+            for (int j = y + 1; j < y + 13; j++){
+              if (arrayA[i][j]==255){
+                containsWhite = 1;
+                cells++;
+                break;
+              }
+            }
+            if (containsWhite){
+              break;
+            }
+          }
+        }
+        if (containsWhite==1){
+          for (int i = x + 1; i < x + 13; i++){
+            for (int j = y+1; j < y + 13; j++){
+              arrayA[i][j]=0;
+            }
+            }
+            x+=12;
+        } 
+      }
+    }
+
 }
 
 // Main function
@@ -134,28 +156,30 @@ int main(int argc, char **argv)
   read_bitmap(argv[1], input_image);
 
   // Run inversion
-  invert(input_image, output_image);
   ConvertToGrey(input_image);
   binaryThreshold(greyImage2D);
-  
   erode(greyImage2D,arrayB);
-  erode(arrayB,arrayA);
-  upscale2DTo3D(arrayA, greyImage3D);
-  write_bitmap(greyImage3D, argv[2]);
 
-for (int i = 0; i<10; i++){
+for (int i = 0; i<15; i++){
   if (i%2==0){
     erode(arrayB,arrayA);
+    detect(arrayA);
     upscale2DTo3D(arrayA, greyImage3D);
   }
  else{
   erode(arrayA,arrayB);
+  detect(arrayB);
   upscale2DTo3D(arrayB, greyImage3D);
  }
   write_bitmap(greyImage3D, argv[2]);
+  if (*ptr==0){
+    // end loop
+    printf("image is black- no more cells");
+    break;
+  }
   sleep(1);
 }
-//write_bitmap(greyImage3D, argv[2]);
+
 
   
 //upscale2DTo3D(arrayB, greyImage3D);
@@ -165,6 +189,7 @@ for (int i = 0; i<10; i++){
   // Save image to file
   //write_bitmap(output_image, argv[2]);
   //write_bitmap(greyImage3D, argv[2]);
+  printf("celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
 }
