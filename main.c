@@ -15,9 +15,9 @@ unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT];
 unsigned char greyImage3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 unsigned char array2D[BMP_WIDTH][BMP_HEIGHT];
 unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
-int wasEroded=0;
-int *ptr=&wasEroded;
-int cells=0;
+int wasEroded = 0;
+int *ptr = &wasEroded;
+int cells = 0;
 
 void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
@@ -66,73 +66,90 @@ void binaryThreshold(unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT])
   }
 }
 
-void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT]){
-  *ptr=0;
-  for (int x = 1; x< BMP_WIDTH-1; x++){
-      for (int y = 1; y< BMP_HEIGHT-1; y++){
-          if (arrayA[x-1][y]== 0||arrayA[x][y-1]==0||arrayA[x][y+1]==0||arrayA[x+1][y]==0){
-            arrayB[x][y]=0;
-            // was eroded kommer her ind 
-          }
-          else{
-            arrayB[x][y]=255;
-            *ptr=1;
-          }
+void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT])
+{
+  *ptr = 0;
+  for (int x = 1; x < BMP_WIDTH - 1; x++)
+  {
+    for (int y = 1; y < BMP_HEIGHT - 1; y++)
+    {
+      if (arrayA[x - 1][y] == 0 || arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y] == 0)
+      {
+        arrayB[x][y] = 0;
+        // was eroded kommer her ind
       }
-    
+      else
+      {
+        arrayB[x][y] = 255;
+        *ptr = 1;
+      }
     }
-    printf("%i\n",*ptr);
-    for (int x = 0; x < BMP_WIDTH; x++){
-      arrayB[x][0]=0;
-      arrayB[x][BMP_WIDTH-1]=0;
-      arrayB[0][x]=0;
-      arrayB[BMP_HEIGHT-1][x]=0;
-  
-    }
+  }
+  printf("%i\n", *ptr);
+  for (int x = 0; x < BMP_WIDTH; x++)
+  {
+    arrayB[x][0] = 0;
+    arrayB[x][BMP_WIDTH - 1] = 0;
+    arrayB[0][x] = 0;
+    arrayB[BMP_HEIGHT - 1][x] = 0;
+  }
 }
-void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT]){
-  for (int x = 0; x < BMP_WIDTH-15; x++){
-      for (int y = 0; y < BMP_HEIGHT-15; y++){
-        int blackBorder = 1;
-        int containsWhite = 0;
+void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
+{
+  for (int x = 0; x < BMP_WIDTH - 15; x++)
+  {
+    for (int y = 0; y < BMP_HEIGHT - 15; y++)
+    {
+      int blackBorder = 1;
+      int containsWhite = 0;
 
-        for (int i = x; i < x + 14 ; i++ ){
-          if (arrayA[i][y] == 255||arrayA[i][y+13]==255){
-            blackBorder = 0;
-            break;
-          }
+      for (int i = x; i < x + 14; i++)
+      {
+        if (arrayA[i][y] == 255 || arrayA[i][y + 13] == 255)
+        {
+          blackBorder = 0;
+          break;
         }
-        for ( int i = y+1; i < y + 14 ; i++ ){
-          if (arrayA[x][i] == 255||arrayA[x+13][i]==255){ 
-            blackBorder = 0;
-            break;
-          }
+      }
+      for (int i = y + 1; i < y + 14; i++)
+      {
+        if (arrayA[x][i] == 255 || arrayA[x + 13][i] == 255)
+        {
+          blackBorder = 0;
+          break;
         }
-        if(blackBorder == 1){
-          for (int i = x + 1; i < x + 13; i++){
-            for (int j = y + 1; j < y + 13; j++){
-              if (arrayA[i][j]==255){
-                containsWhite = 1;
-                cells++;
-                break;
-              }
-            }
-            if (containsWhite){
+      }
+      if (blackBorder == 1)
+      {
+        for (int i = x + 1; i < x + 13; i++)
+        {
+          for (int j = y + 1; j < y + 13; j++)
+          {
+            if (arrayA[i][j] == 255)
+            {
+              containsWhite = 1;
+              cells++;
               break;
             }
           }
+          if (containsWhite)
+          {
+            break;
+          }
         }
-        if (containsWhite==1){
-          for (int i = x + 1; i < x + 13; i++){
-            for (int j = y+1; j < y + 13; j++){
-              arrayA[i][j]=0;
-            }
-            }
-            x+=12;
-        } 
+      }
+      if (containsWhite == 1)
+      {
+        for (int i = x + 1; i < x + 13; i++)
+        {
+          for (int j = y + 1; j < y + 13; j++)
+          {
+            arrayA[i][j] = 0;
+          }
+        }
       }
     }
-
+  }
 }
 
 // Main function
@@ -158,38 +175,40 @@ int main(int argc, char **argv)
   // Run inversion
   ConvertToGrey(input_image);
   binaryThreshold(greyImage2D);
-  erode(greyImage2D,arrayB);
+  erode(greyImage2D, arrayB);
 
-for (int i = 0; i<15; i++){
-  if (i%2==0){
-    erode(arrayB,arrayA);
-    detect(arrayA);
-    upscale2DTo3D(arrayA, greyImage3D);
+  for (int i = 0; i < 15; i++)
+  {
+    if (i % 2 == 0)
+    {
+      erode(arrayB, arrayA);
+      detect(arrayA);
+      upscale2DTo3D(arrayA, greyImage3D);
+    }
+    else
+    {
+      erode(arrayA, arrayB);
+      detect(arrayB);
+      upscale2DTo3D(arrayB, greyImage3D);
+    }
+    write_bitmap(greyImage3D, argv[2]);
+    if (*ptr == 0)
+    {
+      // end loop
+      printf("image is black- no more cells\n");
+      break;
+    }
+    sleep(1);
   }
- else{
-  erode(arrayA,arrayB);
-  detect(arrayB);
-  upscale2DTo3D(arrayB, greyImage3D);
- }
-  write_bitmap(greyImage3D, argv[2]);
-  if (*ptr==0){
-    // end loop
-    printf("image is black- no more cells");
-    break;
-  }
-  sleep(1);
-}
 
-
-  
-//upscale2DTo3D(arrayB, greyImage3D);
+  // upscale2DTo3D(arrayB, greyImage3D);
 
   // printarray(input_image);
 
   // Save image to file
-  //write_bitmap(output_image, argv[2]);
-  //write_bitmap(greyImage3D, argv[2]);
-  printf("celler fundet: %i \n", cells);
+  // write_bitmap(output_image, argv[2]);
+  // write_bitmap(greyImage3D, argv[2]);
+  printf("Celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
 }
