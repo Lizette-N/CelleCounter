@@ -9,6 +9,7 @@
 #include "cbmp.h"
 #include <unistd.h>
 
+int cellLocations[BMP_HEIGHT][2];
 unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT];
 unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT];
 unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT];
@@ -85,7 +86,7 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
       }
     }
   }
-  printf("%i\n", *ptr);
+ // printf("%i\n", *ptr);
   for (int x = 0; x < BMP_WIDTH; x++)
   {
     arrayB[x][0] = 0;
@@ -96,14 +97,14 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
 }
 void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
 {
-  for (int x = 0; x < BMP_WIDTH - 15; x++)
+  for (int x = 0; x < BMP_WIDTH - 15; x++)// every celle run through
   {
     for (int y = 0; y < BMP_HEIGHT - 15; y++)
     {
       int blackBorder = 1;
       int containsWhite = 0;
 
-      for (int i = x; i < x + 14; i++)
+      for (int i = x; i < x + 14; i++)// border check
       {
         if (arrayA[i][y] == 255 || arrayA[i][y + 13] == 255)
         {
@@ -119,7 +120,7 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
           break;
         }
       }
-      if (blackBorder == 1)
+      if (blackBorder == 1) // celle detection
       {
         for (int i = x + 1; i < x + 13; i++)
         {
@@ -128,6 +129,8 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
             if (arrayA[i][j] == 255)
             {
               containsWhite = 1;
+              cellLocations[cells][0] = x+7;
+              cellLocations[cells][1] = y+7;
               cells++;
               break;
             }
@@ -149,6 +152,23 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
         }
       }
     }
+  }
+}
+
+void markCells(int cellLocations[BMP_WIDTH][2], int cells){
+  printf("Cell Coordinates:\n");
+  for (int c = 0; c < cells; c++){
+      
+      int a = cellLocations[c][0]; 
+      int b = cellLocations[c][1];
+      printf("Cell %i, at (%i, %i)\n",c+1,a,b);
+      for (int j = a-7; j<a+7; j++){
+        for (int k = b-7; k<b+7; k++){
+          input_image[j][k][0]=255;
+          input_image[j][k][1]=0;
+          input_image[j][k][2]=0;
+      }
+      }
   }
 }
 
@@ -195,6 +215,8 @@ int main(int argc, char **argv)
     if (*ptr == 0)
     {
       // end loop
+      markCells(cellLocations,cells);
+      write_bitmap(input_image, argv[2]);
       printf("image is black- no more cells\n");
       break;
     }
