@@ -196,9 +196,8 @@ int main(int argc, char **argv)
   ConvertToGrey(input_image);
   binaryThreshold(greyImage2D);
   erode(greyImage2D, arrayB);
-
-  for (int i = 0; i < 15; i++)
-  {
+  int i = 0;
+  do{
     if (i % 2 == 0)
     {
       erode(arrayB, arrayA);
@@ -212,16 +211,12 @@ int main(int argc, char **argv)
       upscale2DTo3D(arrayB, greyImage3D);
     }
     write_bitmap(greyImage3D, argv[2]);
-    if (*ptr == 0)
-    {
-      // end loop
+    sleep(1); 
+  i++;
+  } while (*ptr != 0);
       markCells(cellLocations,cells);
       write_bitmap(input_image, argv[2]);
       printf("image is black- no more cells\n");
-      break;
-    }
-    sleep(1);
-  }
 
   // upscale2DTo3D(arrayB, greyImage3D);
 
