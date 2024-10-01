@@ -181,16 +181,9 @@ int main(int argc, char **argv)
   binaryThreshold(arrayA);
   deleteBoarder(arrayA);
   erode(arrayA, arrayB);
+  int i = 0;
 
-  for (int i = 0; i < 15; i++)
-  {
-    if (*ptr == 0)
-    {
-      // end loop
-      markCells(cellLocations, cells);
-      write_bitmap(input_image, argv[2]);
-      break;
-    }
+  while (*ptr != 0){
     if (i % 2 == 0)
     {
       erode(arrayB, arrayA);
@@ -201,7 +194,11 @@ int main(int argc, char **argv)
       erode(arrayA, arrayB);
       detect(arrayB);
     }
+  i++;
   }
+  markCells(cellLocations,cells);
+  write_bitmap(input_image, argv[2]);
+  printf("image is black- no more cells\n");
   printf("Celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
