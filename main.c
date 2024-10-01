@@ -13,7 +13,6 @@ int cellLocations[BMP_HEIGHT][2];
 unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT];
 unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT];
-unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 int wasEroded = 0;
 int *ptr = &wasEroded;
 int cells = 0;
@@ -29,22 +28,6 @@ void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS
   }
 }
 
-void upscale2DTo3D(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
-{
-  for (int x = 0; x < BMP_WIDTH; x++)
-  {
-    for (int y = 0; y < BMP_HEIGHT; y++)
-    {
-      for (int c = 0; c < BMP_CHANNELS; c++)
-      {
-        array3D[x][y][c] = arrayA[x][y];
-      }
-    }
-  }
-}
-
-
-
 void binaryThreshold(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -57,7 +40,7 @@ void binaryThreshold(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
       }
       else
       {
-        arrayA[x][y] = 254;
+        arrayA[x][y] = 255;
       }
     }
   }
@@ -70,7 +53,7 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
   {
     for (int y = 1; y < BMP_HEIGHT - 1; y++)
     {
-      if (arrayA[x - 1][y] == 0 || arrayA[x + 1][y] == 0|| arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y+1] == 0|| arrayA[x + 1][y-1] == 0|| arrayA[x - 1][y+1] == 0|| arrayA[x - 1][y-1] == 0)
+      if (arrayA[x - 1][y] == 0 || arrayA[x + 1][y] == 0 || arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y + 1] == 0 || arrayA[x + 1][y - 1] == 0 || arrayA[x - 1][y + 1] == 0 || arrayA[x - 1][y - 1] == 0)
       {
         arrayB[x][y] = 0;
       }
@@ -84,24 +67,24 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
 }
 void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
 {
-  for (int x = 0; x < BMP_WIDTH - 15; x++)// every celle run through
+  for (int x = 0; x < BMP_WIDTH - 10; x++) // every celle run through
   {
-    for (int y = 0; y < BMP_HEIGHT - 15; y++)
+    for (int y = 0; y < BMP_HEIGHT - 10; y++)
     {
       int blackBorder = 1;
       int containsWhite = 0;
 
-      for (int i = x; i < x + 14; i++)// border check
+      for (int i = x; i < x + 9; i++) // border check
       {
-        if (arrayA[i][y] == 255 || arrayA[i][y + 13] == 255)
+        if (arrayA[i][y] == 255 || arrayA[i][y + 8] == 255)
         {
           blackBorder = 0;
           break;
         }
       }
-      for (int i = y + 1; i < y + 14; i++)
+      for (int i = y + 1; i < y + 9; i++)
       {
-        if (arrayA[x][i] == 255 || arrayA[x + 13][i] == 255)
+        if (arrayA[x][i] == 255 || arrayA[x + 8][i] == 255)
         {
           blackBorder = 0;
           break;
@@ -109,15 +92,15 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
       }
       if (blackBorder == 1) // celle detection
       {
-        for (int i = x + 1; i < x + 13; i++)
+        for (int i = x + 1; i < x + 8; i++)
         {
-          for (int j = y + 1; j < y + 13; j++)
+          for (int j = y + 1; j < y + 8; j++)
           {
             if (arrayA[i][j] == 255)
             {
               containsWhite = 1;
-              cellLocations[cells][0] = x+7;
-              cellLocations[cells][1] = y+7;
+              cellLocations[cells][0] = x + 6;
+              cellLocations[cells][1] = y + 6;
               cells++;
               break;
             }
@@ -130,9 +113,9 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
       }
       if (containsWhite == 1)
       {
-        for (int i = x + 1; i < x + 13; i++)
+        for (int i = x + 1; i < x + 8; i++)
         {
-          for (int j = y + 1; j < y + 13; j++)
+          for (int j = y + 1; j < y + 8; j++)
           {
             arrayA[i][j] = 0;
           }
@@ -142,23 +125,28 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
   }
 }
 
-void markCells(int cellLocations[BMP_WIDTH][2], int cells){
+void markCells(int cellLocations[BMP_WIDTH][2], int cells)
+{
   printf("Cell Coordinates:\n");
-  for (int c = 0; c < cells; c++){
-      
-      int a = cellLocations[c][0]; 
-      int b = cellLocations[c][1];
-      printf("Cell %i, at (%i, %i)\n",c+1,a,b);
-      for (int j = a-7; j<a+7; j++){
-        for (int k = b-7; k<b+7; k++){
-          input_image[j][k][0]=255;
-          input_image[j][k][1]=0;
-          input_image[j][k][2]=0;
+  for (int c = 0; c < cells; c++)
+  {
+
+    int a = cellLocations[c][0];
+    int b = cellLocations[c][1];
+    printf("Cell %i, at (%i, %i)\n", c + 1, a, b);
+    for (int j = a - 7; j < a + 7; j++)
+    {
+      for (int k = b - 7; k < b + 7; k++)
+      {
+        input_image[j][k][0] = 255;
+        input_image[j][k][1] = 0;
+        input_image[j][k][2] = 0;
       }
-      }
+    }
   }
 }
-void deleteBoarder( unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT]){
+void deleteBoarder(unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT])
+{
   for (int x = 0; x < BMP_WIDTH; x++)
   {
     arrayB[x][0] = 0;
@@ -196,37 +184,24 @@ int main(int argc, char **argv)
 
   for (int i = 0; i < 15; i++)
   {
+    if (*ptr == 0)
+    {
+      // end loop
+      markCells(cellLocations, cells);
+      write_bitmap(input_image, argv[2]);
+      break;
+    }
     if (i % 2 == 0)
     {
       erode(arrayB, arrayA);
       detect(arrayA);
-      upscale2DTo3D(arrayA, array3D);
     }
     else
     {
       erode(arrayA, arrayB);
       detect(arrayB);
-      upscale2DTo3D(arrayB, array3D);
     }
-    write_bitmap(array3D, argv[2]);
-    if (*ptr == 0)
-    {
-      // end loop
-      markCells(cellLocations,cells);
-      write_bitmap(input_image, argv[2]);
-      printf("image is black- no more cells\n");
-      break;
-    }
-    sleep(1);
   }
-
-  // upscale2DTo3D(arrayB, greyImage3D);
-
-  // printarray(input_image);
-
-  // Save image to file
-  // write_bitmap(output_image, argv[2]);
-  // write_bitmap(greyImage3D, argv[2]);
   printf("Celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
