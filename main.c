@@ -198,7 +198,6 @@ int main(int argc, char **argv)
   }
   markCells(cellLocations,cells);
   write_bitmap(input_image, argv[2]);
-  printf("image is black- no more cells\n");
   printf("Celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
