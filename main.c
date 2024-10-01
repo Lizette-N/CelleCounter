@@ -10,11 +10,9 @@
 #include <unistd.h>
 
 int cellLocations[BMP_HEIGHT][2];
+unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT];
 unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT];
-unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT];
-unsigned char greyImage3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
-unsigned char array2D[BMP_WIDTH][BMP_HEIGHT];
 unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 int wasEroded = 0;
 int *ptr = &wasEroded;
@@ -26,12 +24,12 @@ void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS
   {
     for (int y = 0; y < BMP_HEIGHT; y++)
     {
-      greyImage2D[x][y] = (input_image[x][y][0] + input_image[x][y][1] + input_image[x][y][2]) / 3;
+      arrayA[x][y] = (input_image[x][y][0] + input_image[x][y][1] + input_image[x][y][2]) / 3;
     }
   }
 }
 
-void upscale2DTo3D(unsigned char array2D[BMP_WIDTH][BMP_HEIGHT], unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
+void upscale2DTo3D(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
   {
@@ -39,29 +37,27 @@ void upscale2DTo3D(unsigned char array2D[BMP_WIDTH][BMP_HEIGHT], unsigned char a
     {
       for (int c = 0; c < BMP_CHANNELS; c++)
       {
-        array3D[x][y][c] = array2D[x][y];
+        array3D[x][y][c] = arrayA[x][y];
       }
     }
   }
 }
 
-// Declaring the array to store the image (unsigned char = unsigned 8 bit)
-unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
-unsigned char output_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 
-void binaryThreshold(unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT])
+
+void binaryThreshold(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
   {
     for (int y = 0; y < BMP_HEIGHT; y++)
     {
-      if (greyImage2D[x][y] <= 90)
+      if (arrayA[x][y] <= 90)
       {
-        greyImage2D[x][y] = 0;
+        arrayA[x][y] = 0;
       }
       else
       {
-        greyImage2D[x][y] = 254;
+        arrayA[x][y] = 254;
       }
     }
   }
@@ -74,10 +70,9 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
   {
     for (int y = 1; y < BMP_HEIGHT - 1; y++)
     {
-      if (arrayA[x - 1][y] == 0 || arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y] == 0)
+      if (arrayA[x - 1][y] == 0 || arrayA[x + 1][y] == 0|| arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y+1] == 0|| arrayA[x + 1][y-1] == 0|| arrayA[x - 1][y+1] == 0|| arrayA[x - 1][y-1] == 0)
       {
         arrayB[x][y] = 0;
-        // was eroded kommer her ind
       }
       else
       {
@@ -85,14 +80,6 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
         *ptr = 1;
       }
     }
-  }
- // printf("%i\n", *ptr);
-  for (int x = 0; x < BMP_WIDTH; x++)
-  {
-    arrayB[x][0] = 0;
-    arrayB[x][BMP_WIDTH - 1] = 0;
-    arrayB[0][x] = 0;
-    arrayB[BMP_HEIGHT - 1][x] = 0;
   }
 }
 void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
@@ -171,6 +158,15 @@ void markCells(int cellLocations[BMP_WIDTH][2], int cells){
       }
   }
 }
+void deleteBoarder( unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT]){
+  for (int x = 0; x < BMP_WIDTH; x++)
+  {
+    arrayB[x][0] = 0;
+    arrayB[x][BMP_WIDTH - 1] = 0;
+    arrayB[0][x] = 0;
+    arrayB[BMP_HEIGHT - 1][x] = 0;
+  }
+}
 
 // Main function
 int main(int argc, char **argv)
@@ -194,29 +190,35 @@ int main(int argc, char **argv)
 
   // Run inversion
   ConvertToGrey(input_image);
-  binaryThreshold(greyImage2D);
-  erode(greyImage2D, arrayB);
-  int i = 0;
-  do{
+  binaryThreshold(arrayA);
+  deleteBoarder(arrayA);
+  erode(arrayA, arrayB);
+
+  for (int i = 0; i < 15; i++)
+  {
     if (i % 2 == 0)
     {
       erode(arrayB, arrayA);
       detect(arrayA);
-      upscale2DTo3D(arrayA, greyImage3D);
+      upscale2DTo3D(arrayA, array3D);
     }
     else
     {
       erode(arrayA, arrayB);
       detect(arrayB);
-      upscale2DTo3D(arrayB, greyImage3D);
+      upscale2DTo3D(arrayB, array3D);
     }
-    write_bitmap(greyImage3D, argv[2]);
-    sleep(1); 
-  i++;
-  } while (*ptr != 0);
+    write_bitmap(array3D, argv[2]);
+    if (*ptr == 0)
+    {
+      // end loop
       markCells(cellLocations,cells);
       write_bitmap(input_image, argv[2]);
       printf("image is black- no more cells\n");
+      break;
+    }
+    sleep(1);
+  }
 
   // upscale2DTo3D(arrayB, greyImage3D);
 
