@@ -9,6 +9,7 @@
 #include "cbmp.h"
 #include <unistd.h>
 
+// Static arrays, pointer and ints
 int cellLocations[BMP_HEIGHT][2];
 unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT];
 unsigned char arrayB[BMP_WIDTH][BMP_HEIGHT];
@@ -20,6 +21,7 @@ int wasEroded = 0;
 int *ptr = &wasEroded;
 int cells = 0;
 
+// Converts to grey
 void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -31,6 +33,7 @@ void ConvertToGrey(unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS
   }
 }
 
+// Makes 2D array 3D
 void upscale2DTo3D(unsigned char array2D[BMP_WIDTH][BMP_HEIGHT], unsigned char array3D[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -49,6 +52,7 @@ void upscale2DTo3D(unsigned char array2D[BMP_WIDTH][BMP_HEIGHT], unsigned char a
 unsigned char input_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 unsigned char output_image[BMP_WIDTH][BMP_HEIGHT][BMP_CHANNELS];
 
+// Binary Threshold (black and white)
 void binaryThreshold(unsigned char greyImage2D[BMP_WIDTH][BMP_HEIGHT])
 {
   for (int x = 0; x < BMP_WIDTH; x++)
@@ -74,10 +78,10 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
   {
     for (int y = 1; y < BMP_HEIGHT - 1; y++)
     {
+      // erodes if black cell in the 4 cells around the white pixel
       if (arrayA[x - 1][y] == 0 || arrayA[x][y - 1] == 0 || arrayA[x][y + 1] == 0 || arrayA[x + 1][y] == 0)
       {
         arrayB[x][y] = 0;
-        // was eroded kommer her ind
       }
       else
       {
@@ -86,7 +90,6 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
       }
     }
   }
- // printf("%i\n", *ptr);
   for (int x = 0; x < BMP_WIDTH; x++)
   {
     arrayB[x][0] = 0;
@@ -95,16 +98,18 @@ void erode(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT], unsigned char arrayB[BMP
     arrayB[BMP_HEIGHT - 1][x] = 0;
   }
 }
+
+// Detect border starts at 0,0
 void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
 {
-  for (int x = 0; x < BMP_WIDTH - 15; x++)// every celle run through
+  for (int x = 0; x < BMP_WIDTH - 15; x++)
   {
     for (int y = 0; y < BMP_HEIGHT - 15; y++)
     {
       int blackBorder = 1;
       int containsWhite = 0;
 
-      for (int i = x; i < x + 14; i++)// border check
+      for (int i = x; i < x + 14; i++) // border check
       {
         if (arrayA[i][y] == 255 || arrayA[i][y + 13] == 255)
         {
@@ -120,7 +125,7 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
           break;
         }
       }
-      if (blackBorder == 1) // celle detection
+      if (blackBorder == 1) // cell detection
       {
         for (int i = x + 1; i < x + 13; i++)
         {
@@ -129,8 +134,8 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
             if (arrayA[i][j] == 255)
             {
               containsWhite = 1;
-              cellLocations[cells][0] = x+7;
-              cellLocations[cells][1] = y+7;
+              cellLocations[cells][0] = x + 7;
+              cellLocations[cells][1] = y + 7;
               cells++;
               break;
             }
@@ -155,20 +160,25 @@ void detect(unsigned char arrayA[BMP_WIDTH][BMP_HEIGHT])
   }
 }
 
-void markCells(int cellLocations[BMP_WIDTH][2], int cells){
+// Finds the cell coordinates (the center) and marks red
+void markCells(int cellLocations[BMP_WIDTH][2], int cells)
+{
   printf("Cell Coordinates:\n");
-  for (int c = 0; c < cells; c++){
-      
-      int a = cellLocations[c][0]; 
-      int b = cellLocations[c][1];
-      printf("Cell %i, at (%i, %i)\n",c+1,a,b);
-      for (int j = a-7; j<a+7; j++){
-        for (int k = b-7; k<b+7; k++){
-          input_image[j][k][0]=255;
-          input_image[j][k][1]=0;
-          input_image[j][k][2]=0;
+  for (int c = 0; c < cells; c++)
+  {
+
+    int a = cellLocations[c][0];
+    int b = cellLocations[c][1];
+    printf("Cell %i, at (%i, %i)\n", c + 1, a, b);
+    for (int j = a - 7; j < a + 7; j++)
+    {
+      for (int k = b - 7; k < b + 7; k++)
+      {
+        input_image[j][k][0] = 255;
+        input_image[j][k][1] = 0;
+        input_image[j][k][2] = 0;
       }
-      }
+    }
   }
 }
 
@@ -197,7 +207,9 @@ int main(int argc, char **argv)
   binaryThreshold(greyImage2D);
   erode(greyImage2D, arrayB);
   int i = 0;
-  do{
+  // do while that does one erode and detect cycle, and then switches between using arrayA and arrayB, effectively reusing the arrays.
+  do
+  {
     if (i % 2 == 0)
     {
       erode(arrayB, arrayA);
@@ -211,20 +223,12 @@ int main(int argc, char **argv)
       upscale2DTo3D(arrayB, greyImage3D);
     }
     write_bitmap(greyImage3D, argv[2]);
-    sleep(1); 
-  i++;
+    sleep(1);
+    i++;
   } while (*ptr != 0);
-      markCells(cellLocations,cells);
-      write_bitmap(input_image, argv[2]);
-      printf("image is black- no more cells\n");
-
-  // upscale2DTo3D(arrayB, greyImage3D);
-
-  // printarray(input_image);
-
-  // Save image to file
-  // write_bitmap(output_image, argv[2]);
-  // write_bitmap(greyImage3D, argv[2]);
+  markCells(cellLocations, cells);
+  write_bitmap(input_image, argv[2]);
+  printf("image is black- no more cells\n");
   printf("Celler fundet: %i \n", cells);
   printf("Done!\n");
   return 0;
